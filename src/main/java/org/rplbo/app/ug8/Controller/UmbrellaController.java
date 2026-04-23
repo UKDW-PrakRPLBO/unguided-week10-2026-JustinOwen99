@@ -39,8 +39,10 @@ public class UmbrellaController implements Initializable {
 
         // --- TULIS KODE ANDA DI BAWAH INI ---
 
-
-
+        colName.setCellValueFactory(new PropertyValueFactory<>("itemName"));
+        colInitial.setCellValueFactory(new PropertyValueFactory<>("initialStock"));
+        colSupply.setCellValueFactory(new PropertyValueFactory<>("newSupply"));
+        colFinal.setCellValueFactory(new PropertyValueFactory<>("finalStock"));
 
         // ==============================================================================
         // TODO 2: LISTENER KLIK BARIS TABEL (SELECTION MODEL)
@@ -58,9 +60,11 @@ public class UmbrellaController implements Initializable {
         tableInventory.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal != null) {
                 // --- TULIS KODE ANDA DI BAWAH INI ---
-
-
-
+                selectedItem = newVal;
+                txtItem.setText(newVal.getItemName());
+                txtInitial.setText(String.valueOf(newVal.getInitialStock()));
+                txtSupply.setText(String.valueOf(newVal.getNewSupply()));
+                txtItem.setDisable(true);
             }
         });
 
@@ -84,8 +88,34 @@ public class UmbrellaController implements Initializable {
         // ==============================================================================
 
         // --- TULIS KODE ANDA DI BAWAH INI ---
+        if (selectedItem == null) {
+            showAlert(Alert.AlertType.WARNING, "WARNING", "Please select an item first.");
+            return;
+        }
 
+        try {
+            int initial = Integer.parseInt(txtInitial.getText().trim());
+            int supply = Integer.parseInt(txtSupply.getText().trim());
+            int finalStock = initial + supply;
 
+            InventoryItem updatedItem = new InventoryItem(
+                    selectedItem.getItemName(),
+                    initial,
+                    supply,
+                    finalStock
+            );
+
+            boolean success = db.updateItem(updatedItem);
+            if (success) {
+                refreshTable();
+                clearFields();
+            }
+        } catch (NumberFormatException e) {
+            showAlert(Alert.AlertType.ERROR, "ERROR", "Initial Stock and New Supply must be numbers.");
+        }
+    }
+
+    private void showAlert(Alert.AlertType alertType, String warning, String s) {
     }
 
     @FXML
@@ -103,8 +133,19 @@ public class UmbrellaController implements Initializable {
         // ==============================================================================
 
         // --- TULIS KODE ANDA DI BAWAH INI ---
+        try {
+            String itemName = txtItem.getText().trim();
+            int initial = Integer.parseInt(txtInitial.getText().trim());
+            int supply = Integer.parseInt(txtSupply.getText().trim());
+            int finalStock = initial + supply;
 
-
+            InventoryItem newItem = new InventoryItem(itemName, initial, supply, finalStock);
+            db.addItem(newItem);
+            refreshTable();
+            clearFields();
+        } catch (NumberFormatException e) {
+            showAlert(Alert.AlertType.ERROR, "ERROR", "Initial Stock and New Supply must be numbers.");
+        }
     }
 
     @FXML
@@ -123,8 +164,25 @@ public class UmbrellaController implements Initializable {
         // ==============================================================================
 
         // --- TULIS KODE ANDA DI BAWAH INI ---
+        InventoryItem itemToDelete = tableInventory.getSelectionModel().getSelectedItem();
 
+        if (itemToDelete == null) {
+            showAlert(Alert.AlertType.WARNING, "WARNING", "Please select an item first.");
+            return;
+        }
 
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Confirm Delete");
+        confirm.setHeaderText("Delete selected item?");
+        confirm.setContentText("Item: " + itemToDelete.getItemName());
+
+        if (confirm.showAndWait().isPresent() && confirm.getResult() == ButtonType.OK) {
+            boolean success = db.deleteItem(itemToDelete.getItemName());
+            if (success) {
+                masterData.remove(itemToDelete);
+                clearFields();
+            }
+        }
     }
 
     // Logout
